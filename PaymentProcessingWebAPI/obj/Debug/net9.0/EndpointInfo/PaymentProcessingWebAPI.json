@@ -1,0 +1,1389 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Payment Processing API",
+    "description": "A robust ASP.NET Core Web API for payment processing with Authorize.Net integration",
+    "contact": {
+      "name": "Payment Processing System",
+      "email": "support@paymentprocessing.com"
+    },
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "https://localhost:7001",
+      "description": "Development HTTPS Server"
+    },
+    {
+      "url": "http://localhost:5000",
+      "description": "Development HTTP Server"
+    }
+  ],
+  "paths": {
+    "/api/Auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Authenticate user and generate JWT token",
+        "requestBody": {
+          "description": "Login credentials",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication successful, returns JWT token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Diagnostics/config-test": {
+      "get": {
+        "tags": [
+          "Diagnostics"
+        ],
+        "summary": "Test configuration loading (shows masked credentials for security)",
+        "responses": {
+          "200": {
+            "description": "Configuration loaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigTestResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - JWT token required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Diagnostics/transaction-refund-check/{transactionId}": {
+      "get": {
+        "tags": [
+          "Diagnostics"
+        ],
+        "summary": "Check transaction eligibility for refund",
+        "parameters": [
+          {
+            "name": "transactionId",
+            "in": "path",
+            "description": "Transaction ID to check",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionRefundCheckResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Diagnostics/database-test": {
+      "get": {
+        "tags": [
+          "Diagnostics"
+        ],
+        "summary": "Test database connectivity",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatabaseTestResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Orders/{orderId}": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "Get detailed information about a specific order",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "description": "The unique identifier of the order",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order found and returned successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - JWT token required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Order not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Orders": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "Get a paginated list of orders",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (default: 1, minimum: 1)",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "Number of items per page (default: 10, maximum: 100)",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Orders retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - JWT token required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Orders/{orderId}/transactions": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "Get all transactions associated with a specific order",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "description": "The unique identifier of the order",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transactions retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Transaction"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - JWT token required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Payments/purchase": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Process a direct purchase (authorization and capture in one step)",
+        "requestBody": {
+          "description": "Payment details including customer information and credit card",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment processed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or payment declined",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - JWT token required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Payments/authorize": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Authorize a payment without capturing funds",
+        "requestBody": {
+          "description": "Payment details including customer information and credit card",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment authorized successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or authorization declined",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - JWT token required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Payments/capture/{transactionId}": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Capture funds from a previously authorized transaction",
+        "parameters": [
+          {
+            "name": "transactionId",
+            "in": "path",
+            "description": "The transaction ID from the authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Capture details including amount",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptureRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptureRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Funds captured successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request, transaction not found, or capture failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - JWT token required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Payments/void/{transactionId}": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Void a previously authorized transaction (before capture)",
+        "parameters": [
+          {
+            "name": "transactionId",
+            "in": "path",
+            "description": "The transaction ID from the authorization",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction voided successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Transaction not found or void failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - JWT token required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Payments/refund/{transactionId}": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Process a refund for a captured transaction (full or partial)",
+        "parameters": [
+          {
+            "name": "transactionId",
+            "in": "path",
+            "description": "The transaction ID from the original capture",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Refund details including amount and reason",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Refund processed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request, transaction not found, or refund failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - JWT token required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CaptureRequest": {
+        "required": [
+          "amount"
+        ],
+        "type": "object",
+        "properties": {
+          "amount": {
+            "minimum": 0.01,
+            "type": "number",
+            "description": "Amount to capture (can be less than or equal to authorized amount)",
+            "format": "double",
+            "example": 100.5
+          }
+        },
+        "additionalProperties": false,
+        "description": "Request to capture funds from an authorized transaction"
+      },
+      "ConfigTestResponse": {
+        "type": "object",
+        "properties": {
+          "authorizeNetConfigured": {
+            "type": "boolean",
+            "description": "Whether Authorize.Net is properly configured"
+          },
+          "apiLoginIdMasked": {
+            "type": "string",
+            "description": "Masked API Login ID for verification",
+            "nullable": true
+          },
+          "transactionKeyMasked": {
+            "type": "string",
+            "description": "Masked Transaction Key for verification",
+            "nullable": true
+          },
+          "environment": {
+            "type": "string",
+            "description": "Authorize.Net environment (Sandbox/Production)",
+            "nullable": true
+          },
+          "jwtConfigured": {
+            "type": "boolean",
+            "description": "Whether JWT is properly configured"
+          },
+          "jwtIssuer": {
+            "type": "string",
+            "description": "JWT issuer",
+            "nullable": true
+          },
+          "jwtAudience": {
+            "type": "string",
+            "description": "JWT audience",
+            "nullable": true
+          },
+          "databaseConnectionConfigured": {
+            "type": "boolean",
+            "description": "Whether database connection is configured"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Configuration test response"
+      },
+      "CreditCardDto": {
+        "required": [
+          "cardNumber",
+          "cvv",
+          "expirationMonth",
+          "expirationYear"
+        ],
+        "type": "object",
+        "properties": {
+          "cardNumber": {
+            "minLength": 1,
+            "type": "string",
+            "description": "Credit card number (use test numbers for sandbox)",
+            "example": "4111111111111111"
+          },
+          "expirationMonth": {
+            "maximum": 12,
+            "minimum": 1,
+            "type": "integer",
+            "description": "Expiration month (1-12)",
+            "format": "int32",
+            "example": 12
+          },
+          "expirationYear": {
+            "maximum": 2050,
+            "minimum": 2024,
+            "type": "integer",
+            "description": "Expiration year (4-digit year)",
+            "format": "int32",
+            "example": 2025
+          },
+          "cvv": {
+            "minLength": 1,
+            "type": "string",
+            "description": "Card verification value (CVV/CVC)",
+            "example": "123"
+          },
+          "nameOnCard": {
+            "type": "string",
+            "description": "Name as it appears on the card",
+            "nullable": true,
+            "example": "John Doe"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Credit card information for payment processing"
+      },
+      "DatabaseTestResponse": {
+        "type": "object",
+        "properties": {
+          "canConnect": {
+            "type": "boolean",
+            "description": "Whether database connection is successful"
+          },
+          "orderCount": {
+            "type": "integer",
+            "description": "Number of orders in database",
+            "format": "int32"
+          },
+          "transactionCount": {
+            "type": "integer",
+            "description": "Number of transactions in database",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string",
+            "description": "Status message",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Database test response"
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Error message",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Error response model"
+      },
+      "LoginRequest": {
+        "required": [
+          "password",
+          "username"
+        ],
+        "type": "object",
+        "properties": {
+          "username": {
+            "minLength": 1,
+            "type": "string",
+            "description": "Username for authentication",
+            "example": "admin"
+          },
+          "password": {
+            "minLength": 1,
+            "type": "string",
+            "description": "Password for authentication",
+            "example": "password"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Login request model"
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "JWT authentication token",
+            "nullable": true
+          },
+          "expiresIn": {
+            "type": "integer",
+            "description": "Token expiration time in seconds",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Login response model"
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerId": {
+            "type": "string",
+            "nullable": true
+          },
+          "amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "currency": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "transactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Transaction"
+            },
+            "nullable": true
+          },
+          "paymentMethod": {
+            "$ref": "#/components/schemas/PaymentMethod"
+          }
+        },
+        "additionalProperties": false
+      },
+      "OrderResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique order identifier",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "orderNumber": {
+            "type": "string",
+            "description": "Human-readable order number",
+            "nullable": true,
+            "example": "ORD_20241201123456_7890"
+          },
+          "customerId": {
+            "type": "string",
+            "description": "Customer identifier",
+            "nullable": true,
+            "example": "CUST_12345"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Order amount",
+            "format": "double",
+            "example": 100.5
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency code",
+            "nullable": true,
+            "example": "USD"
+          },
+          "status": {
+            "type": "string",
+            "description": "Current order status",
+            "nullable": true,
+            "example": "Captured"
+          },
+          "description": {
+            "type": "string",
+            "description": "Order description",
+            "nullable": true,
+            "example": "Product purchase - Order #12345"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Order creation timestamp",
+            "format": "date-time",
+            "example": "2024-12-01T12:34:56.789Z"
+          },
+          "transactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransactionResponse"
+            },
+            "description": "List of all transactions associated with this order",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Order information with associated transactions"
+      },
+      "OrderStatus": {
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "type": "integer",
+        "format": "int32"
+      },
+      "PaymentMethod": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lastFourDigits": {
+            "type": "string",
+            "nullable": true
+          },
+          "cardType": {
+            "type": "string",
+            "nullable": true
+          },
+          "expirationMonth": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "expirationYear": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "nameOnCard": {
+            "type": "string",
+            "nullable": true
+          },
+          "billingAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "order": {
+            "$ref": "#/components/schemas/Order"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PaymentRequest": {
+        "required": [
+          "amount",
+          "creditCard",
+          "customerId"
+        ],
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "minLength": 1,
+            "type": "string",
+            "description": "Unique identifier for the customer",
+            "example": "CUST_12345"
+          },
+          "amount": {
+            "minimum": 0.01,
+            "type": "number",
+            "description": "Payment amount in USD",
+            "format": "double",
+            "example": 100.5
+          },
+          "creditCard": {
+            "$ref": "#/components/schemas/CreditCardDto"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description for the payment",
+            "nullable": true,
+            "example": "Product purchase - Order #12345"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Payment request containing customer and payment information"
+      },
+      "PaymentResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Indicates if the payment operation was successful",
+            "example": true
+          },
+          "transactionId": {
+            "type": "string",
+            "description": "Internal transaction identifier",
+            "nullable": true,
+            "example": "TXN_20241201123456_abc123def456"
+          },
+          "authorizeNetTransactionId": {
+            "type": "string",
+            "description": "Authorize.Net transaction identifier",
+            "nullable": true,
+            "example": "60123456789"
+          },
+          "orderNumber": {
+            "type": "string",
+            "description": "Order number associated with the transaction",
+            "nullable": true,
+            "example": "ORD_20241201123456_7890"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Transaction amount",
+            "format": "double",
+            "example": 100.5
+          },
+          "status": {
+            "type": "string",
+            "description": "Current status of the transaction",
+            "nullable": true,
+            "example": "Captured"
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message from the payment processor",
+            "nullable": true,
+            "example": "Transaction completed successfully"
+          },
+          "errorCode": {
+            "type": "string",
+            "description": "Error code if the transaction failed",
+            "nullable": true,
+            "example": "2"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Response from payment processing operations"
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": { }
+      },
+      "RefundRequest": {
+        "required": [
+          "amount"
+        ],
+        "type": "object",
+        "properties": {
+          "amount": {
+            "minimum": 0.01,
+            "type": "number",
+            "description": "Amount to refund (can be partial or full)",
+            "format": "double",
+            "example": 50.25
+          },
+          "reason": {
+            "type": "string",
+            "description": "Optional reason for the refund",
+            "nullable": true,
+            "example": "Customer requested refund"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Request to refund a captured transaction"
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "transactionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/TransactionType"
+          },
+          "amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TransactionStatus"
+          },
+          "authorizeNetTransactionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "responseCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "responseMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "order": {
+            "$ref": "#/components/schemas/Order"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TransactionRefundCheckResponse": {
+        "type": "object",
+        "properties": {
+          "transactionId": {
+            "type": "string",
+            "description": "Transaction ID",
+            "nullable": true
+          },
+          "transactionType": {
+            "type": "string",
+            "description": "Type of transaction (Purchase, Authorize, etc.)",
+            "nullable": true
+          },
+          "transactionStatus": {
+            "type": "string",
+            "description": "Current transaction status",
+            "nullable": true
+          },
+          "authorizeNetTransactionId": {
+            "type": "string",
+            "description": "Authorize.Net transaction ID",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the transaction was created",
+            "format": "date-time"
+          },
+          "timeSinceCreation": {
+            "type": "string",
+            "description": "Time elapsed since transaction creation",
+            "format": "date-span"
+          },
+          "isOldEnoughForRefund": {
+            "type": "boolean",
+            "description": "Whether enough time has passed for settlement"
+          },
+          "canBeRefunded": {
+            "type": "boolean",
+            "description": "Whether this transaction can be refunded"
+          },
+          "shouldUseVoid": {
+            "type": "boolean",
+            "description": "Whether void should be used instead of refund"
+          },
+          "recommendedAction": {
+            "type": "string",
+            "description": "Recommended action for this transaction",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Transaction refund eligibility check response"
+      },
+      "TransactionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique transaction identifier",
+            "format": "uuid",
+            "example": "660f9511-f3ac-52e5-b827-557766551111"
+          },
+          "transactionId": {
+            "type": "string",
+            "description": "Human-readable transaction identifier",
+            "nullable": true,
+            "example": "TXN_20241201123456_abc123def456"
+          },
+          "type": {
+            "type": "string",
+            "description": "Type of transaction",
+            "nullable": true,
+            "example": "Purchase"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Transaction amount",
+            "format": "double",
+            "example": 100.5
+          },
+          "status": {
+            "type": "string",
+            "description": "Current transaction status",
+            "nullable": true,
+            "example": "Success"
+          },
+          "authorizeNetTransactionId": {
+            "type": "string",
+            "description": "Authorize.Net transaction identifier",
+            "nullable": true,
+            "example": "60123456789"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Transaction creation timestamp",
+            "format": "date-time",
+            "example": "2024-12-01T12:34:56.789Z"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Transaction information"
+      },
+      "TransactionStatus": {
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "type": "integer",
+        "format": "int32"
+      },
+      "TransactionType": {
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "type": "integer",
+        "format": "int32"
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "apiKey",
+        "description": "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below.",
+        "name": "Authorization",
+        "in": "header"
+      }
+    }
+  },
+  "security": [
+    {
+      "Bearer": [ ]
+    }
+  ]
+}

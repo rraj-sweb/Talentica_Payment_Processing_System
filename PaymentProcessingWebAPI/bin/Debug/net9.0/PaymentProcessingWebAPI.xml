@@ -1,0 +1,561 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>PaymentProcessingWebAPI</name>
+    </assembly>
+    <members>
+        <member name="T:PaymentProcessingWebAPI.Controllers.AuthController">
+            <summary>
+            Authentication controller for JWT token management
+            </summary>
+        </member>
+        <member name="M:PaymentProcessingWebAPI.Controllers.AuthController.Login(PaymentProcessingWebAPI.Controllers.LoginRequest)">
+            <summary>
+            Authenticate user and generate JWT token
+            </summary>
+            <param name="request">Login credentials</param>
+            <returns>JWT token with expiration information</returns>
+            <response code="200">Authentication successful, returns JWT token</response>
+            <response code="400">Invalid request format</response>
+            <response code="401">Invalid credentials</response>
+        </member>
+        <member name="T:PaymentProcessingWebAPI.Controllers.LoginRequest">
+            <summary>
+            Login request model
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.LoginRequest.Username">
+            <summary>
+            Username for authentication
+            </summary>
+            <example>admin</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.LoginRequest.Password">
+            <summary>
+            Password for authentication
+            </summary>
+            <example>password</example>
+        </member>
+        <member name="T:PaymentProcessingWebAPI.Controllers.LoginResponse">
+            <summary>
+            Login response model
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.LoginResponse.Token">
+            <summary>
+            JWT authentication token
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.LoginResponse.ExpiresIn">
+            <summary>
+            Token expiration time in seconds
+            </summary>
+        </member>
+        <member name="T:PaymentProcessingWebAPI.Controllers.ErrorResponse">
+            <summary>
+            Error response model
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.ErrorResponse.Message">
+            <summary>
+            Error message
+            </summary>
+        </member>
+        <member name="T:PaymentProcessingWebAPI.Controllers.DiagnosticsController">
+            <summary>
+            Diagnostics controller for troubleshooting configuration issues
+            </summary>
+        </member>
+        <member name="M:PaymentProcessingWebAPI.Controllers.DiagnosticsController.TestConfig">
+            <summary>
+            Test configuration loading (shows masked credentials for security)
+            </summary>
+            <returns>Configuration status with masked sensitive data</returns>
+            <response code="200">Configuration loaded successfully</response>
+            <response code="401">Unauthorized - JWT token required</response>
+        </member>
+        <member name="M:PaymentProcessingWebAPI.Controllers.DiagnosticsController.CheckTransactionRefundEligibility(System.String,PaymentProcessingWebAPI.Services.Interfaces.ITransactionService)">
+            <summary>
+            Check transaction eligibility for refund
+            </summary>
+            <param name="transactionId">Transaction ID to check</param>
+            <returns>Transaction refund eligibility status</returns>
+        </member>
+        <member name="M:PaymentProcessingWebAPI.Controllers.DiagnosticsController.TestDatabase(PaymentProcessingWebAPI.Data.PaymentDbContext)">
+            <summary>
+            Test database connectivity
+            </summary>
+            <returns>Database connection status</returns>
+        </member>
+        <member name="T:PaymentProcessingWebAPI.Controllers.ConfigTestResponse">
+            <summary>
+            Configuration test response
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.ConfigTestResponse.AuthorizeNetConfigured">
+            <summary>
+            Whether Authorize.Net is properly configured
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.ConfigTestResponse.ApiLoginIdMasked">
+            <summary>
+            Masked API Login ID for verification
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.ConfigTestResponse.TransactionKeyMasked">
+            <summary>
+            Masked Transaction Key for verification
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.ConfigTestResponse.Environment">
+            <summary>
+            Authorize.Net environment (Sandbox/Production)
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.ConfigTestResponse.JwtConfigured">
+            <summary>
+            Whether JWT is properly configured
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.ConfigTestResponse.JwtIssuer">
+            <summary>
+            JWT issuer
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.ConfigTestResponse.JwtAudience">
+            <summary>
+            JWT audience
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.ConfigTestResponse.DatabaseConnectionConfigured">
+            <summary>
+            Whether database connection is configured
+            </summary>
+        </member>
+        <member name="T:PaymentProcessingWebAPI.Controllers.DatabaseTestResponse">
+            <summary>
+            Database test response
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.DatabaseTestResponse.CanConnect">
+            <summary>
+            Whether database connection is successful
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.DatabaseTestResponse.OrderCount">
+            <summary>
+            Number of orders in database
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.DatabaseTestResponse.TransactionCount">
+            <summary>
+            Number of transactions in database
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.DatabaseTestResponse.Message">
+            <summary>
+            Status message
+            </summary>
+        </member>
+        <member name="T:PaymentProcessingWebAPI.Controllers.TransactionRefundCheckResponse">
+            <summary>
+            Transaction refund eligibility check response
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.TransactionRefundCheckResponse.TransactionId">
+            <summary>
+            Transaction ID
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.TransactionRefundCheckResponse.TransactionType">
+            <summary>
+            Type of transaction (Purchase, Authorize, etc.)
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.TransactionRefundCheckResponse.TransactionStatus">
+            <summary>
+            Current transaction status
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.TransactionRefundCheckResponse.AuthorizeNetTransactionId">
+            <summary>
+            Authorize.Net transaction ID
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.TransactionRefundCheckResponse.CreatedAt">
+            <summary>
+            When the transaction was created
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.TransactionRefundCheckResponse.TimeSinceCreation">
+            <summary>
+            Time elapsed since transaction creation
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.TransactionRefundCheckResponse.IsOldEnoughForRefund">
+            <summary>
+            Whether enough time has passed for settlement
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.TransactionRefundCheckResponse.CanBeRefunded">
+            <summary>
+            Whether this transaction can be refunded
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.TransactionRefundCheckResponse.ShouldUseVoid">
+            <summary>
+            Whether void should be used instead of refund
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Controllers.TransactionRefundCheckResponse.RecommendedAction">
+            <summary>
+            Recommended action for this transaction
+            </summary>
+        </member>
+        <member name="T:PaymentProcessingWebAPI.Controllers.OrdersController">
+            <summary>
+            Order management controller for retrieving order and transaction information
+            </summary>
+        </member>
+        <member name="M:PaymentProcessingWebAPI.Controllers.OrdersController.GetOrder(System.Guid)">
+            <summary>
+            Get detailed information about a specific order
+            </summary>
+            <param name="orderId">The unique identifier of the order</param>
+            <returns>Order details including all associated transactions</returns>
+            <response code="200">Order found and returned successfully</response>
+            <response code="401">Unauthorized - JWT token required</response>
+            <response code="404">Order not found</response>
+        </member>
+        <member name="M:PaymentProcessingWebAPI.Controllers.OrdersController.GetOrders(System.Int32,System.Int32)">
+            <summary>
+            Get a paginated list of orders
+            </summary>
+            <param name="page">Page number (default: 1, minimum: 1)</param>
+            <param name="pageSize">Number of items per page (default: 10, maximum: 100)</param>
+            <returns>List of orders with pagination</returns>
+            <response code="200">Orders retrieved successfully</response>
+            <response code="401">Unauthorized - JWT token required</response>
+        </member>
+        <member name="M:PaymentProcessingWebAPI.Controllers.OrdersController.GetOrderTransactions(System.Guid)">
+            <summary>
+            Get all transactions associated with a specific order
+            </summary>
+            <param name="orderId">The unique identifier of the order</param>
+            <returns>List of transactions for the specified order</returns>
+            <response code="200">Transactions retrieved successfully</response>
+            <response code="401">Unauthorized - JWT token required</response>
+        </member>
+        <member name="T:PaymentProcessingWebAPI.Controllers.PaymentsController">
+            <summary>
+            Payment processing controller for handling various payment operations
+            </summary>
+        </member>
+        <member name="M:PaymentProcessingWebAPI.Controllers.PaymentsController.Purchase(PaymentProcessingWebAPI.Models.DTOs.PaymentRequest)">
+            <summary>
+            Process a direct purchase (authorization and capture in one step)
+            </summary>
+            <param name="request">Payment details including customer information and credit card</param>
+            <returns>Payment result with transaction details</returns>
+            <response code="200">Payment processed successfully</response>
+            <response code="400">Invalid request or payment declined</response>
+            <response code="401">Unauthorized - JWT token required</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:PaymentProcessingWebAPI.Controllers.PaymentsController.Authorize(PaymentProcessingWebAPI.Models.DTOs.PaymentRequest)">
+            <summary>
+            Authorize a payment without capturing funds
+            </summary>
+            <param name="request">Payment details including customer information and credit card</param>
+            <returns>Authorization result with transaction details</returns>
+            <response code="200">Payment authorized successfully</response>
+            <response code="400">Invalid request or authorization declined</response>
+            <response code="401">Unauthorized - JWT token required</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:PaymentProcessingWebAPI.Controllers.PaymentsController.Capture(System.String,PaymentProcessingWebAPI.Models.DTOs.CaptureRequest)">
+            <summary>
+            Capture funds from a previously authorized transaction
+            </summary>
+            <param name="transactionId">The transaction ID from the authorization</param>
+            <param name="request">Capture details including amount</param>
+            <returns>Capture result with transaction details</returns>
+            <response code="200">Funds captured successfully</response>
+            <response code="400">Invalid request, transaction not found, or capture failed</response>
+            <response code="401">Unauthorized - JWT token required</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:PaymentProcessingWebAPI.Controllers.PaymentsController.Void(System.String)">
+            <summary>
+            Void a previously authorized transaction (before capture)
+            </summary>
+            <param name="transactionId">The transaction ID from the authorization</param>
+            <returns>Void result with transaction details</returns>
+            <response code="200">Transaction voided successfully</response>
+            <response code="400">Transaction not found or void failed</response>
+            <response code="401">Unauthorized - JWT token required</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="M:PaymentProcessingWebAPI.Controllers.PaymentsController.Refund(System.String,PaymentProcessingWebAPI.Models.DTOs.RefundRequest)">
+            <summary>
+            Process a refund for a captured transaction (full or partial)
+            </summary>
+            <param name="transactionId">The transaction ID from the original capture</param>
+            <param name="request">Refund details including amount and reason</param>
+            <returns>Refund result with transaction details</returns>
+            <response code="200">Refund processed successfully</response>
+            <response code="400">Invalid request, transaction not found, or refund failed</response>
+            <response code="401">Unauthorized - JWT token required</response>
+            <response code="500">Internal server error</response>
+        </member>
+        <member name="T:PaymentProcessingWebAPI.Models.DTOs.PaymentRequest">
+            <summary>
+            Payment request containing customer and payment information
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.PaymentRequest.CustomerId">
+            <summary>
+            Unique identifier for the customer
+            </summary>
+            <example>CUST_12345</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.PaymentRequest.Amount">
+            <summary>
+            Payment amount in USD
+            </summary>
+            <example>100.50</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.PaymentRequest.CreditCard">
+            <summary>
+            Credit card information
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.PaymentRequest.Description">
+            <summary>
+            Optional description for the payment
+            </summary>
+            <example>Product purchase - Order #12345</example>
+        </member>
+        <member name="T:PaymentProcessingWebAPI.Models.DTOs.CreditCardDto">
+            <summary>
+            Credit card information for payment processing
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.CreditCardDto.CardNumber">
+            <summary>
+            Credit card number (use test numbers for sandbox)
+            </summary>
+            <example>4111111111111111</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.CreditCardDto.ExpirationMonth">
+            <summary>
+            Expiration month (1-12)
+            </summary>
+            <example>12</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.CreditCardDto.ExpirationYear">
+            <summary>
+            Expiration year (4-digit year)
+            </summary>
+            <example>2025</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.CreditCardDto.CVV">
+            <summary>
+            Card verification value (CVV/CVC)
+            </summary>
+            <example>123</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.CreditCardDto.NameOnCard">
+            <summary>
+            Name as it appears on the card
+            </summary>
+            <example>John Doe</example>
+        </member>
+        <member name="T:PaymentProcessingWebAPI.Models.DTOs.CaptureRequest">
+            <summary>
+            Request to capture funds from an authorized transaction
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.CaptureRequest.Amount">
+            <summary>
+            Amount to capture (can be less than or equal to authorized amount)
+            </summary>
+            <example>100.50</example>
+        </member>
+        <member name="T:PaymentProcessingWebAPI.Models.DTOs.RefundRequest">
+            <summary>
+            Request to refund a captured transaction
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.RefundRequest.Amount">
+            <summary>
+            Amount to refund (can be partial or full)
+            </summary>
+            <example>50.25</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.RefundRequest.Reason">
+            <summary>
+            Optional reason for the refund
+            </summary>
+            <example>Customer requested refund</example>
+        </member>
+        <member name="T:PaymentProcessingWebAPI.Models.DTOs.PaymentResponse">
+            <summary>
+            Response from payment processing operations
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.PaymentResponse.Success">
+            <summary>
+            Indicates if the payment operation was successful
+            </summary>
+            <example>true</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.PaymentResponse.TransactionId">
+            <summary>
+            Internal transaction identifier
+            </summary>
+            <example>TXN_20241201123456_abc123def456</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.PaymentResponse.AuthorizeNetTransactionId">
+            <summary>
+            Authorize.Net transaction identifier
+            </summary>
+            <example>60123456789</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.PaymentResponse.OrderNumber">
+            <summary>
+            Order number associated with the transaction
+            </summary>
+            <example>ORD_20241201123456_7890</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.PaymentResponse.Amount">
+            <summary>
+            Transaction amount
+            </summary>
+            <example>100.50</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.PaymentResponse.Status">
+            <summary>
+            Current status of the transaction
+            </summary>
+            <example>Captured</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.PaymentResponse.Message">
+            <summary>
+            Response message from the payment processor
+            </summary>
+            <example>Transaction completed successfully</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.PaymentResponse.ErrorCode">
+            <summary>
+            Error code if the transaction failed
+            </summary>
+            <example>2</example>
+        </member>
+        <member name="T:PaymentProcessingWebAPI.Models.DTOs.OrderResponse">
+            <summary>
+            Order information with associated transactions
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.OrderResponse.Id">
+            <summary>
+            Unique order identifier
+            </summary>
+            <example>550e8400-e29b-41d4-a716-446655440000</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.OrderResponse.OrderNumber">
+            <summary>
+            Human-readable order number
+            </summary>
+            <example>ORD_20241201123456_7890</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.OrderResponse.CustomerId">
+            <summary>
+            Customer identifier
+            </summary>
+            <example>CUST_12345</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.OrderResponse.Amount">
+            <summary>
+            Order amount
+            </summary>
+            <example>100.50</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.OrderResponse.Currency">
+            <summary>
+            Currency code
+            </summary>
+            <example>USD</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.OrderResponse.Status">
+            <summary>
+            Current order status
+            </summary>
+            <example>Captured</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.OrderResponse.Description">
+            <summary>
+            Order description
+            </summary>
+            <example>Product purchase - Order #12345</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.OrderResponse.CreatedAt">
+            <summary>
+            Order creation timestamp
+            </summary>
+            <example>2024-12-01T12:34:56.789Z</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.OrderResponse.Transactions">
+            <summary>
+            List of all transactions associated with this order
+            </summary>
+        </member>
+        <member name="T:PaymentProcessingWebAPI.Models.DTOs.TransactionResponse">
+            <summary>
+            Transaction information
+            </summary>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.TransactionResponse.Id">
+            <summary>
+            Unique transaction identifier
+            </summary>
+            <example>660f9511-f3ac-52e5-b827-557766551111</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.TransactionResponse.TransactionId">
+            <summary>
+            Human-readable transaction identifier
+            </summary>
+            <example>TXN_20241201123456_abc123def456</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.TransactionResponse.Type">
+            <summary>
+            Type of transaction
+            </summary>
+            <example>Purchase</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.TransactionResponse.Amount">
+            <summary>
+            Transaction amount
+            </summary>
+            <example>100.50</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.TransactionResponse.Status">
+            <summary>
+            Current transaction status
+            </summary>
+            <example>Success</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.TransactionResponse.AuthorizeNetTransactionId">
+            <summary>
+            Authorize.Net transaction identifier
+            </summary>
+            <example>60123456789</example>
+        </member>
+        <member name="P:PaymentProcessingWebAPI.Models.DTOs.TransactionResponse.CreatedAt">
+            <summary>
+            Transaction creation timestamp
+            </summary>
+            <example>2024-12-01T12:34:56.789Z</example>
+        </member>
+    </members>
+</doc>
