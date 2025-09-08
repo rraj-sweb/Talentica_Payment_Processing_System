@@ -1,0 +1,979 @@
+openapi: 3.0.3
+info:
+  title: Payment Processing System API
+  description: |
+    A robust payment processing system built with ASP.NET Core 9.0 that integrates with Authorize.Net 
+    for handling various payment operations including purchase, authorization, capture, void, and refunds.
+    
+    ## Features
+    - Complete payment flows (Purchase, Authorize+Capture, Void, Refunds)
+    - JWT authentication for secure API access
+    - Comprehensive order and transaction management
+    - Authorize.Net sandbox integration
+    - PCI DSS compliant data handling
+    
+    ## Authentication
+    All payment endpoints require JWT authentication. Use the `/auth/login` endpoint to obtain a token.
+    
+    ## Test Credit Cards (Sandbox)
+    - Visa: 4111111111111111
+    - Mastercard: 5555555555554444
+    - American Express: 378282246310005
+    
+  version: 1.0.0
+  contact:
+    name: Payment Processing API Support
+    email: support@paymentapi.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://localhost:7001/api
+    description: Development server (HTTPS)
+  - url: http://localhost:5000/api
+    description: Development server (HTTP)
+
+security:
+  - BearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Authenticate user and generate JWT token
+      description: |
+        Authenticate with username and password to receive a JWT token for accessing protected endpoints.
+        
+        **Default Credentials:**
+        - Username: admin
+        - Password: password
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: admin
+              password: password
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              example:
+                token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                expiresIn: 3600
+        '400':
+          description: Invalid request format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /payments/purchase:
+    post:
+      tags:
+        - Payment Processing
+      summary: Process a direct purchase
+      description: |
+        Process a direct purchase (authorization and capture in one step). This is the most common 
+        payment method for digital products and services where immediate payment is required.
+      operationId: purchase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+            example:
+              customerId: CUST_12345
+              amount: 100.50
+              description: Product purchase - Order #12345
+              creditCard:
+                cardNumber: "4111111111111111"
+                expirationMonth: 12
+                expirationYear: 2025
+                cvv: "123"
+                nameOnCard: John Doe
+      responses:
+        '200':
+          description: Payment processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+              example:
+                success: true
+                transactionId: TXN_20241201123456_abc123def456
+                authorizeNetTransactionId: "60123456789"
+                orderNumber: ORD_20241201123456_7890
+                amount: 100.50
+                status: Captured
+                message: Transaction completed successfully
+        '400':
+          description: Invalid request or payment declined
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+
+  /payments/authorize:
+    post:
+      tags:
+        - Payment Processing
+      summary: Authorize a payment without capturing funds
+      description: |
+        Authorize a payment to hold funds on the customer's card without capturing them immediately. 
+        Use this for orders that require fulfillment before charging the customer.
+      operationId: authorize
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+            example:
+              customerId: CUST_12345
+              amount: 200.00
+              description: Pre-authorization for Order #12345
+              creditCard:
+                cardNumber: "4111111111111111"
+                expirationMonth: 12
+                expirationYear: 2025
+                cvv: "123"
+                nameOnCard: John Doe
+      responses:
+        '200':
+          description: Authorization successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+              example:
+                success: true
+                transactionId: TXN_20241201123456_def789ghi012
+                authorizeNetTransactionId: "60123456790"
+                orderNumber: ORD_20241201123456_7891
+                amount: 200.00
+                status: Authorized
+                message: Authorization completed successfully
+        '400':
+          description: Invalid request or authorization declined
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+
+  /payments/capture/{transactionId}:
+    post:
+      tags:
+        - Payment Processing
+      summary: Capture funds from an authorized transaction
+      description: |
+        Capture funds from a previously authorized transaction. The capture amount can be less than 
+        or equal to the authorized amount but cannot exceed it.
+      operationId: capture
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          description: The transaction ID of the authorization to capture
+          schema:
+            type: string
+          example: TXN_20241201123456_def789ghi012
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaptureRequest'
+            example:
+              amount: 200.00
+      responses:
+        '200':
+          description: Capture successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+              example:
+                success: true
+                transactionId: TXN_20241201123457_ghi012jkl345
+                authorizeNetTransactionId: "60123456790"
+                orderNumber: ORD_20241201123456_7891
+                amount: 200.00
+                status: Captured
+                message: Capture completed successfully
+        '400':
+          description: Invalid request or capture failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+
+  /payments/void/{transactionId}:
+    post:
+      tags:
+        - Payment Processing
+      summary: Void an authorized transaction
+      description: |
+        Void (cancel) an authorized transaction before it is captured. This releases the held funds 
+        back to the customer's account. Only works on unsettled transactions.
+      operationId: void
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          description: The transaction ID of the authorization to void
+          schema:
+            type: string
+          example: TXN_20241201123456_def789ghi012
+      responses:
+        '200':
+          description: Void successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+              example:
+                success: true
+                transactionId: TXN_20241201123458_jkl345mno678
+                authorizeNetTransactionId: "60123456790"
+                orderNumber: ORD_20241201123456_7891
+                amount: 200.00
+                status: Voided
+                message: Transaction voided successfully
+        '400':
+          description: Invalid request or void failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+
+  /payments/refund/{transactionId}:
+    post:
+      tags:
+        - Payment Processing
+      summary: Process a refund for a captured transaction
+      description: |
+        Process a full or partial refund for a previously captured transaction. The transaction 
+        must be settled (typically 24+ hours after capture) before it can be refunded.
+      operationId: refund
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          description: The transaction ID of the captured transaction to refund
+          schema:
+            type: string
+          example: TXN_20241201123456_abc123def456
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundRequest'
+            example:
+              amount: 50.25
+              reason: Customer requested refund
+      responses:
+        '200':
+          description: Refund processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+              example:
+                success: true
+                transactionId: TXN_20241201123459_mno678pqr901
+                authorizeNetTransactionId: "60123456791"
+                orderNumber: ORD_20241201123456_7890
+                amount: 50.25
+                status: Refunded
+                message: Refund processed successfully
+        '400':
+          description: Invalid request or refund failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+
+  /orders/{orderId}:
+    get:
+      tags:
+        - Order Management
+      summary: Get detailed information about a specific order
+      description: |
+        Retrieve comprehensive information about an order including all associated transactions 
+        and payment method details.
+      operationId: getOrder
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          description: The unique identifier of the order
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: Order details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+              example:
+                id: 550e8400-e29b-41d4-a716-446655440000
+                orderNumber: ORD_20241201123456_7890
+                customerId: CUST_12345
+                amount: 100.50
+                currency: USD
+                status: Captured
+                description: Product purchase - Order #12345
+                createdAt: "2024-12-01T12:34:56.789Z"
+                transactions:
+                  - id: 660f9511-f3ac-52e5-b827-557766551111
+                    transactionId: TXN_20241201123456_abc123def456
+                    type: Purchase
+                    amount: 100.50
+                    status: Success
+                    authorizeNetTransactionId: "60123456789"
+                    createdAt: "2024-12-01T12:34:56.789Z"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /orders:
+    get:
+      tags:
+        - Order Management
+      summary: List orders with pagination
+      description: |
+        Retrieve a paginated list of orders. Results are ordered by creation date (newest first).
+      operationId: getOrders
+      parameters:
+        - name: page
+          in: query
+          description: Page number (1-based)
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: pageSize
+          in: query
+          description: Number of orders per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          example: 10
+      responses:
+        '200':
+          description: Orders retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderResponse'
+              example:
+                - id: 550e8400-e29b-41d4-a716-446655440000
+                  orderNumber: ORD_20241201123456_7890
+                  customerId: CUST_12345
+                  amount: 100.50
+                  currency: USD
+                  status: Captured
+                  description: Product purchase - Order #12345
+                  createdAt: "2024-12-01T12:34:56.789Z"
+                  transactions: []
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /orders/{orderId}/transactions:
+    get:
+      tags:
+        - Order Management
+      summary: Get all transactions for a specific order
+      description: |
+        Retrieve all transactions associated with a specific order, including purchases, 
+        authorizations, captures, voids, and refunds.
+      operationId: getOrderTransactions
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          description: The unique identifier of the order
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: Order transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TransactionResponse'
+              example:
+                - id: 660f9511-f3ac-52e5-b827-557766551111
+                  transactionId: TXN_20241201123456_abc123def456
+                  type: Purchase
+                  amount: 100.50
+                  status: Success
+                  authorizeNetTransactionId: "60123456789"
+                  createdAt: "2024-12-01T12:34:56.789Z"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /diagnostics/config-test:
+    get:
+      tags:
+        - Diagnostics
+      summary: Test system configuration
+      description: |
+        Test the system configuration including Authorize.Net credentials and JWT settings. 
+        Useful for troubleshooting configuration issues.
+      operationId: configTest
+      responses:
+        '200':
+          description: Configuration test results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigTestResponse'
+              example:
+                authorizeNetConfigured: true
+                jwtConfigured: true
+                databaseConnected: true
+                message: All configurations are valid
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          description: Configuration error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigTestResponse'
+
+  /diagnostics/database-test:
+    get:
+      tags:
+        - Diagnostics
+      summary: Test database connectivity
+      description: |
+        Test the database connection and verify that all required tables exist. 
+        Useful for troubleshooting database connectivity issues.
+      operationId: databaseTest
+      responses:
+        '200':
+          description: Database test results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseTestResponse'
+              example:
+                connected: true
+                tablesExist: true
+                message: Database connection successful
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          description: Database connection error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseTestResponse'
+
+  /diagnostics/transaction-refund-check/{transactionId}:
+    get:
+      tags:
+        - Diagnostics
+      summary: Check if a transaction can be refunded
+      description: |
+        Check if a specific transaction meets the criteria for refunding, including settlement 
+        status and transaction type validation.
+      operationId: transactionRefundCheck
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          description: The transaction ID to check for refund eligibility
+          schema:
+            type: string
+          example: TXN_20241201123456_abc123def456
+      responses:
+        '200':
+          description: Refund eligibility check results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionRefundCheckResponse'
+              example:
+                canRefund: true
+                reason: Transaction is settled and eligible for refund
+                transactionType: Purchase
+                transactionStatus: Success
+                settlementStatus: Settled
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from the /auth/login endpoint. 
+        Include the token in the Authorization header as: Bearer {token}
+
+  responses:
+    UnauthorizedError:
+      description: Authentication required or token invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Unauthorized
+            message: JWT token is required or invalid
+
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          description: Username for authentication
+          example: admin
+        password:
+          type: string
+          format: password
+          description: Password for authentication
+          example: password
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT token for API authentication
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        expiresIn:
+          type: integer
+          description: Token expiration time in seconds
+          example: 3600
+
+    PaymentRequest:
+      type: object
+      required:
+        - customerId
+        - amount
+        - creditCard
+      properties:
+        customerId:
+          type: string
+          description: Unique identifier for the customer
+          example: CUST_12345
+        amount:
+          type: number
+          format: decimal
+          minimum: 0.01
+          description: Payment amount in USD
+          example: 100.50
+        description:
+          type: string
+          description: Optional description for the payment
+          example: Product purchase - Order #12345
+        creditCard:
+          $ref: '#/components/schemas/CreditCardDto'
+
+    CreditCardDto:
+      type: object
+      required:
+        - cardNumber
+        - expirationMonth
+        - expirationYear
+        - cvv
+      properties:
+        cardNumber:
+          type: string
+          description: Credit card number (use test numbers for sandbox)
+          example: "4111111111111111"
+        expirationMonth:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: Expiration month (1-12)
+          example: 12
+        expirationYear:
+          type: integer
+          minimum: 2024
+          maximum: 2050
+          description: Expiration year (4-digit year)
+          example: 2025
+        cvv:
+          type: string
+          description: Card verification value (CVV/CVC)
+          example: "123"
+        nameOnCard:
+          type: string
+          description: Name as it appears on the card
+          example: John Doe
+
+    CaptureRequest:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          format: decimal
+          minimum: 0.01
+          description: Amount to capture (can be less than or equal to authorized amount)
+          example: 100.50
+
+    RefundRequest:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          format: decimal
+          minimum: 0.01
+          description: Amount to refund (can be partial or full)
+          example: 50.25
+        reason:
+          type: string
+          description: Optional reason for the refund
+          example: Customer requested refund
+
+    PaymentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the payment operation was successful
+          example: true
+        transactionId:
+          type: string
+          description: Internal transaction identifier
+          example: TXN_20241201123456_abc123def456
+        authorizeNetTransactionId:
+          type: string
+          nullable: true
+          description: Authorize.Net transaction identifier
+          example: "60123456789"
+        orderNumber:
+          type: string
+          description: Order number associated with the transaction
+          example: ORD_20241201123456_7890
+        amount:
+          type: number
+          format: decimal
+          description: Transaction amount
+          example: 100.50
+        status:
+          type: string
+          description: Current status of the transaction
+          example: Captured
+        message:
+          type: string
+          nullable: true
+          description: Response message from the payment processor
+          example: Transaction completed successfully
+        errorCode:
+          type: string
+          nullable: true
+          description: Error code if the transaction failed
+          example: "2"
+
+    OrderResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique order identifier
+          example: 550e8400-e29b-41d4-a716-446655440000
+        orderNumber:
+          type: string
+          description: Human-readable order number
+          example: ORD_20241201123456_7890
+        customerId:
+          type: string
+          description: Customer identifier
+          example: CUST_12345
+        amount:
+          type: number
+          format: decimal
+          description: Order amount
+          example: 100.50
+        currency:
+          type: string
+          description: Currency code
+          example: USD
+        status:
+          type: string
+          description: Current order status
+          example: Captured
+        description:
+          type: string
+          nullable: true
+          description: Order description
+          example: Product purchase - Order #12345
+        createdAt:
+          type: string
+          format: date-time
+          description: Order creation timestamp
+          example: "2024-12-01T12:34:56.789Z"
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionResponse'
+          description: List of all transactions associated with this order
+
+    TransactionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique transaction identifier
+          example: 660f9511-f3ac-52e5-b827-557766551111
+        transactionId:
+          type: string
+          description: Human-readable transaction identifier
+          example: TXN_20241201123456_abc123def456
+        type:
+          type: string
+          enum: [Purchase, Authorize, Capture, Void, Refund]
+          description: Type of transaction
+          example: Purchase
+        amount:
+          type: number
+          format: decimal
+          description: Transaction amount
+          example: 100.50
+        status:
+          type: string
+          enum: [Pending, Success, Failed, Cancelled]
+          description: Current transaction status
+          example: Success
+        authorizeNetTransactionId:
+          type: string
+          nullable: true
+          description: Authorize.Net transaction identifier
+          example: "60123456789"
+        createdAt:
+          type: string
+          format: date-time
+          description: Transaction creation timestamp
+          example: "2024-12-01T12:34:56.789Z"
+
+    ConfigTestResponse:
+      type: object
+      properties:
+        authorizeNetConfigured:
+          type: boolean
+          description: Whether Authorize.Net is properly configured
+          example: true
+        jwtConfigured:
+          type: boolean
+          description: Whether JWT is properly configured
+          example: true
+        databaseConnected:
+          type: boolean
+          description: Whether database connection is successful
+          example: true
+        message:
+          type: string
+          description: Configuration test result message
+          example: All configurations are valid
+
+    DatabaseTestResponse:
+      type: object
+      properties:
+        connected:
+          type: boolean
+          description: Whether database connection is successful
+          example: true
+        tablesExist:
+          type: boolean
+          description: Whether all required tables exist
+          example: true
+        message:
+          type: string
+          description: Database test result message
+          example: Database connection successful
+
+    TransactionRefundCheckResponse:
+      type: object
+      properties:
+        canRefund:
+          type: boolean
+          description: Whether the transaction can be refunded
+          example: true
+        reason:
+          type: string
+          description: Reason for refund eligibility status
+          example: Transaction is settled and eligible for refund
+        transactionType:
+          type: string
+          description: Type of the original transaction
+          example: Purchase
+        transactionStatus:
+          type: string
+          description: Status of the original transaction
+          example: Success
+        settlementStatus:
+          type: string
+          description: Settlement status of the transaction
+          example: Settled
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error type or category
+          example: ValidationError
+        message:
+          type: string
+          description: Human-readable error message
+          example: The request contains invalid data
+        details:
+          type: object
+          description: Additional error details
+          nullable: true
+
+tags:
+  - name: Authentication
+    description: JWT token management for API access
+  - name: Payment Processing
+    description: Core payment operations including purchase, authorize, capture, void, and refund
+  - name: Order Management
+    description: Order and transaction history retrieval
+  - name: Diagnostics
+    description: System health checks and configuration testing

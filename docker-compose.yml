@@ -1,0 +1,143 @@
+version: '3.8'
+
+services:
+  # SQL Server Database
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: payment-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=PaymentDB123!
+      - MSSQL_PID=Express
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - payment-network
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P PaymentDB123! -Q 'SELECT 1' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  # Payment Processing API
+  payment-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: payment-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=PaymentProcessingDB;User Id=sa;Password=PaymentDB123!;TrustServerCertificate=true;
+      - AuthorizeNet__Environment=Sandbox
+      - AuthorizeNet__ApiLoginId=your-sandbox-api-login-id
+      - AuthorizeNet__TransactionKey=your-16-char-key
+      - Jwt__SecretKey=your-very-secure-jwt-secret-key-at-least-32-characters-long-for-production
+      - Jwt__Issuer=PaymentProcessingAPI
+      - Jwt__Audience=PaymentProcessingClients
+      - Jwt__ExpirationMinutes=60
+      - Logging__LogLevel__Default=Information
+      - Logging__LogLevel__PaymentProcessingWebAPI=Information
+    ports:
+      - "8080:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - payment-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/diagnostics/database-test"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
+    volumes:
+      - api_logs:/app/logs
+
+  # Swagger UI (Standalone)
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: payment-swagger-ui
+    environment:
+      - SWAGGER_JSON=/app/api-spec.yml
+      - BASE_URL=/swagger
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./API-SPECIFICATION.yml:/app/api-spec.yml:ro
+    networks:
+      - payment-network
+    restart: unless-stopped
+
+  # Redis Cache (Optional - for future caching needs)
+  redis:
+    image: redis:7-alpine
+    container_name: payment-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - payment-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: payment-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - payment-api
+      - swagger-ui
+    networks:
+      - payment-network
+    restart: unless-stopped
+
+  # Database Administration Tool (Optional)
+  adminer:
+    image: adminer:latest
+    container_name: payment-adminer
+    ports:
+      - "8082:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=sqlserver
+    networks:
+      - payment-network
+    restart: unless-stopped
+
+networks:
+  payment-network:
+    driver: bridge
+    name: payment-network
+
+volumes:
+  sqlserver_data:
+    driver: local
+    name: payment-sqlserver-data
+  redis_data:
+    driver: local
+    name: payment-redis-data
+  api_logs:
+    driver: local
+    name: payment-api-logs
+  nginx_logs:
+    driver: local
+    name: payment-nginx-logs
